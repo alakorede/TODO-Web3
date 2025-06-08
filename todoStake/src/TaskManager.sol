@@ -1,16 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
-
-
-//CRUD
-//Create createTask()
-//Read getTask()
-//Update completeTask()
-
 contract TaskManager {
     struct Task {
         uint256 id;
         uint256 createdAt;
+        uint256 stake;
         uint256 completedAt;
         uint256 dueDate;
         string title;
@@ -21,75 +15,77 @@ contract TaskManager {
 
     Task[] public tasks;
 
-    function cresteTask(string memory _title, string memory _description, uint256 _dueDate) public {
-        Task memory newTask = Task({
-            id: tasks.length + 1,
-            createdAt: block.timestamp,
+    function createTask(string memory _title, string memory _description, uint256 _dueDate) public payable {
+        Task memory task = Task({
             completedAt: 0,
+            stake: msg.value,
+            createdAt: block.timestamp,
             dueDate: _dueDate,
             title: _title,
             description: _description,
             isCompleted: false,
-            owner: msg.sender
+            owner: msg.sender,
+            id: tasks.length
         });
-        tasks.push(newTask);
 
-        emit TaskCreated(newTask.id, newTask.title, newTask.description, newTask.dueDate, newTask.createdAt, newTask.completedAt, newTask.owner);
+        tasks.push(task);
+
+        emit TaskCreated({
+            id: task.id,
+            createdAt: task.createdAt,
+            stake: task.stake,
+            completedAt: task.completedAt,
+            dueDate: task.dueDate,
+            description: task.description,
+            isCompleted: task.isCompleted,
+            owner: task.owner,
+            title: task.title
+        });
     }
 
-    event TaskCreated(uint256 id, string title, string description, uint256 dueDate, uint256 createdAt, uint256 completedAt, address owner);
+    event TaskCreated(
+        uint256 indexed id,
+        uint256 indexed dueDate,
+        uint256 indexed stake,
+        uint256 completedAt,
+        string description,
+        uint256 createdAt,
+        bool isCompleted,
+        address owner,
+        string title
+    );
 
-    function getTask(uint256 _id) public view returns (Task memory) {
-        require(_id > 0 && _id <= tasks.length, "Task does not exist");
-        return tasks[_id - 1]; // Adjust for zero-based index
-    }
+    event TaskCompleted(uint256 indexed id, uint256 indexed createTask, uint256 indexed completedAt);
 
-    event TaskCompleted(uint256 id, uint256 completedAt);
-    // error Unauthorized();
-    // error AlreadyCompleted();
+    error Unauthorized();
+    error AlreadyCompleted();
 
     function completeTask(uint256 _id) public {
-        require(_id > 0 && _id <= tasks.length, "Task does not exist");
-        Task storage task = tasks[_id - 1]; // Adjust for zero-based index
-        require(!task.isCompleted, "Task already completed");
-        require(task.owner == msg.sender, "Only the owner can complete the task");
+        Task storage task = tasks[_id];
+
+        if (task.owner != msg.sender) {
+            revert Unauthorized();
+        }
+        if (task.isCompleted == true) {
+            revert AlreadyCompleted();
+        }
 
         task.isCompleted = true;
         task.completedAt = block.timestamp;
 
-        emit TaskCompleted(task.id, task.completedAt);
+        // Emit the TaskCompleted event
+        emit TaskCompleted({id: _id, createTask: task.createdAt, completedAt: task.completedAt});
 
-        // if(task.owner != msg.sender) {
-        //     revert Unauthorized();
-        // }
-        // if(task.isCompleted == true) {
-        //     revert AlreadyCompleted();
-        // }
-        // task.isCompleted = true;
-        // task.completedAt = block.timestamp;
+        // Return the stake to the user
+        (bool sent,) = msg.sender.call{value: task.stake}("");
+        require(sent, "Failed to send Ether");
     }
 
-//     mapping(uint256 => Task) private tasks;
-//     uint256 private taskCount;
+    function getTask(uint256 _id) public view returns (Task memory) {
+        return tasks[_id];
+    }
 
-//     event TaskCreated(uint256 id, string description);
-//     event TaskCompleted(uint256 id);
-
-//     function createTask(string memory _description) public {
-//         taskCount++;
-//         tasks[taskCount] = Task(taskCount, _description, false);
-//         emit TaskCreated(taskCount, _description);
-//     }
-
-//     function getTask(uint256 _id) public view returns (Task memory) {
-//         require(_id > 0 && _id <= taskCount, "Task does not exist");
-//         return tasks[_id];
-//     }
-
-//     function completeTask(uint256 _id) public {
-//         require(_id > 0 && _id <= taskCount, "Task does not exist");
-//         tasks[_id].completed = true;
-//         emit TaskCompleted(_id);
-//     }
-// }
+    function tasksCount() public view returns (uint256) {
+        return tasks.length;
+    }
 }

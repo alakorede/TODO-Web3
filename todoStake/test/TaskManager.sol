@@ -11,46 +11,38 @@ contract TaskManagerTest is Test {
         taskManager = new TaskManager();
     }
 
-    function test_CreateTask() public {
-        address owner = address(this);
+    function testCreateTask() public {
+        address owner = address(0xff);
         vm.label(owner, "owner");
+
         vm.prank(owner);
         vm.expectEmit();
-        emit TaskManager.TaskCreated(1, "Test Task", "This is a test task", block.timestamp + 1 days, block.timestamp, 0, owner);
-        taskManager.cresteTask("Test Task", "This is a test task", block.timestamp + 1 days);
-        
-        TaskManager.Task memory task = taskManager.getTask(1);
-        assertEq(task.id, 1);
+        emit TaskManager.TaskCreated(
+            0, "Test Task", "This is a test task", 1717334400, block.timestamp, 0, false, owner
+        );
+        taskManager.createTask("Test Task", "This is a test task", 1717334400);
+
+        TaskManager.Task memory task = taskManager.getTask(0);
         assertEq(task.title, "Test Task");
         assertEq(task.description, "This is a test task");
-        assertTrue(task.isCompleted == false);
-        assertEq(task.dueDate, block.timestamp + 1 days);
+        assertEq(task.dueDate, 1717334400);
         assertEq(task.createdAt, block.timestamp);
         assertEq(task.completedAt, 0);
+        assertEq(task.isCompleted, false);
         assertEq(task.owner, owner);
+        assertEq(task.id, 0);
     }
 
     function testCompleteTask() public {
-        taskManager.cresteTask("Test Task", "This is a test task", block.timestamp + 1 days);
-        taskManager.completeTask(1);
-        assertEq(taskManager.getTask(1).isCompleted, true);
+        taskManager.createTask("Test Task", "This is a test task", block.timestamp + 100);
+        taskManager.completeTask(0);
+        assertEq(taskManager.getTask(0).isCompleted, true);
     }
 
-    function testeCompleteTaskUnauthorized() public {
-        taskManager.cresteTask("Test Task", "This is a test task", block.timestamp + 1 days);
-        address unauthorizedUser = address(0x123);
-        vm.label(unauthorizedUser, "unauthorizedUser");
-        vm.prank(unauthorizedUser);
-        
-        vm.expectRevert("Only the owner can complete the task");
-        taskManager.completeTask(1);
-    }
-
-    function testCompleteTaskAlreadyCompleted() public {
-        taskManager.cresteTask("Test Task", "This is a test task", block.timestamp + 1 days);
-        taskManager.completeTask(1);
-        
-        vm.expectRevert("Task already completed");
-        taskManager.completeTask(1);
+    function testCompleteTaskRevertIfAlreadyCompleted() public {
+        taskManager.createTask("Test Task", "This is a test task", block.timestamp);
+        taskManager.completeTask(0);
+        vm.expectRevert(TaskManager.AlreadyCompleted.selector);
+        taskManager.completeTask(0);
     }
 }

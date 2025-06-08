@@ -49,6 +49,7 @@ $ anvil
 
 ```shell
 $ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
+forge script ./script/TaskManager.s.sol --rpc-url http://127.0.0.1:8545 --broadcast
 ```
 
 ### Cast
